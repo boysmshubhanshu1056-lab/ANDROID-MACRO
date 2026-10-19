@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">PRISMATIC</string>
+    <string name="accessibility_description">Required to detect keyboard presses for the PRISMATIC macro.</string>
+</resources>
