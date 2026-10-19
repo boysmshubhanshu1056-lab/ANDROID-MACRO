@@ -1,6 +1,7 @@
 package com.prismatic.macro
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -33,16 +35,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Force Landscape Mode
         requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         
         setContent {
-            var hasPermission by remember { mutableStateOf(checkAccessibilityPermission()) }
+            var hasAccessibility by remember { mutableStateOf(checkAccessibilityPermission()) }
+            var hasOverlay by remember { mutableStateOf(Settings.canDrawOverlays(this)) }
             val lifecycleOwner = LocalLifecycleOwner.current
 
+            // Check permissions every time the app is resumed (e.g., returning from settings)
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        hasPermission = checkAccessibilityPermission()
+                        hasAccessibility = checkAccessibilityPermission()
+                        hasOverlay = Settings.canDrawOverlays(this@MainActivity)
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
@@ -53,10 +59,18 @@ class MainActivity : ComponentActivity() {
 
             MaterialTheme {
                 Surface(color = DarkBg, modifier = Modifier.fillMaxSize()) {
-                    if (!hasPermission) {
-                        PermissionScreen { 
-                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) 
-                        }
+                    if (!hasAccessibility || !hasOverlay) {
+                        PermissionScreen(
+                            hasAccessibility = hasAccessibility,
+                            hasOverlay = hasOverlay,
+                            onGrantAccessibility = { 
+                                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) 
+                            },
+                            onGrantOverlay = {
+                                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                                startActivity(intent)
+                            }
+                        )
                     } else {
                         MainAppScreen()
                     }
@@ -73,23 +87,43 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PermissionScreen(onGrant: () -> Unit) {
+fun PermissionScreen(
+    hasAccessibility: Boolean, 
+    hasOverlay: Boolean, 
+    onGrantAccessibility: () -> Unit, 
+    onGrantOverlay: () -> Unit
+) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text("PRISMATIC", color = NeonGreen, fontSize = 48.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("Enable Accessibility to use the macro.", color = Color.White, fontSize = 18.sp)
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = onGrant,
-            colors = ButtonDefaults.buttonColors(containerColor = PanelBg),
-            border = BorderStroke(2.dp, NeonGreen),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("GRANT PERMISSION", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        if (!hasAccessibility) {
+            Text("1. Enable Accessibility", color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onGrantAccessibility, 
+                colors = ButtonDefaults.buttonColors(containerColor = PanelBg), 
+                border = BorderStroke(2.dp, NeonGreen)
+            ) {
+                Text("GRANT ACCESSIBILITY", color = NeonGreen, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+        
+        if (!hasOverlay) {
+            Text("2. Allow Drawing Over Apps (For Crosshair Dot)", color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onGrantOverlay, 
+                colors = ButtonDefaults.buttonColors(containerColor = PanelBg), 
+                border = BorderStroke(2.dp, NeonGreen)
+            ) {
+                Text("GRANT OVERLAY", color = NeonGreen, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -115,6 +149,7 @@ fun MainAppScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxSize()) {
+            // LEFT: Keyboard Keys
             Column(
                 modifier = Modifier.weight(1.5f).fillMaxHeight().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -142,10 +177,12 @@ fun MainAppScreen() {
 
             Spacer(modifier = Modifier.width(16.dp))
 
+            // RIGHT: Mouse & Toggles
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
+                // Mouse Panel
                 Column(
                     modifier = Modifier.fillMaxWidth().weight(1f).border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -170,6 +207,7 @@ fun MainAppScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Toggle Switch
                 Column(
                     modifier = Modifier.fillMaxWidth().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).background(PanelBg).padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -193,6 +231,7 @@ fun MainAppScreen() {
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // CPS Checker Button
                 Button(
                     onClick = { showCpsScreen = true },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
