@@ -52,44 +52,50 @@ class MacroAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         MacroState.isServiceRunning = true
-        setupDot()
+        
+        // CRASH FIX: Wait 1.5 seconds before drawing the dot
+        handler.postDelayed({
+            setupDot()
+        }, 1500)
     }
 
     private fun setupDot() {
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        
-        // Make the view 50x50 for the dot
-        params = WindowManager.LayoutParams(
-            50, 50, 
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            // FLAG_NOT_TOUCHABLE allows clicks to pass through
-            // FLAG_NOT_FOCUSABLE stops it from taking over the keyboard
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = 500
-            y = 500
-            targetX = 500f
-            targetY = 500f
-        }
-
-        dotView = DotView(this).apply {
-            // Listen for mouse hover events directly on the view
-            setOnHoverListener { view, event ->
-                if (event.action == MotionEvent.ACTION_HOVER_MOVE) {
-                    targetX = event.rawX
-                    targetY = event.rawY
-
-                    params?.x = event.rawX.toInt() - 25
-                    params?.y = event.rawY.toInt() - 25
-                    
-                    windowManager?.updateViewLayout(view, params)
-                }
-                true
+        try {
+            windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+            
+            params = WindowManager.LayoutParams(
+                50, 50, 
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = 500
+                y = 500
+                targetX = 500f
+                targetY = 500f
             }
+
+            dotView = DotView(this).apply {
+                setOnHoverListener { view, event ->
+                    if (event.action == MotionEvent.ACTION_HOVER_MOVE) {
+                        targetX = event.rawX
+                        targetY = event.rawY
+
+                        params?.x = event.rawX.toInt() - 25
+                        params?.y = event.rawY.toInt() - 25
+                        
+                        try {
+                            windowManager?.updateViewLayout(view, params)
+                        } catch (e: Exception) {}
+                    }
+                    true
+                }
+            }
+            windowManager?.addView(dotView, params)
+        } catch (e: Exception) {
+            // If overlay fails, the app won't crash.
         }
-        windowManager?.addView(dotView, params)
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
@@ -110,16 +116,17 @@ class MacroAccessibilityService : AccessibilityService() {
     
     override fun onDestroy() {
         super.onDestroy()
-        if (dotView != null) {
-            windowManager?.removeView(dotView)
-        }
+        try {
+            if (dotView != null && windowManager != null) {
+                windowManager?.removeView(dotView)
+            }
+        } catch (e: Exception) {}
     }
 }
 
-// --- THE NEW DOT CROSSHAIR ---
 class DotView(context: Context) : View(context) {
     private val paint = Paint().apply {
-        color = Color.parseColor("#39FF14") // Neon Green
+        color = Color.parseColor("#39FF14")
         style = Paint.Style.FILL
         isAntiAlias = true
         setShadowLayer(15f, 0f, 0f, Color.parseColor("#39FF14")) 
@@ -127,7 +134,6 @@ class DotView(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // Draw a small dot right in the center
         canvas.drawCircle(width / 2f, height / 2f, 8f, paint)
     }
 }
