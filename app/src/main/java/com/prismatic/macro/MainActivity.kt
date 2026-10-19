@@ -11,8 +11,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.TouchApp // <-- CHANGED IMPORT
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -117,7 +115,6 @@ fun MainAppScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxSize()) {
-            // LEFT: Keyboard
             Column(
                 modifier = Modifier.weight(1.5f).fillMaxHeight().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -145,31 +142,26 @@ fun MainAppScreen() {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // RIGHT: Mouse & Toggles
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Mouse Panel
                 Column(
                     modifier = Modifier.fillMaxWidth().weight(1f).border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text("MOUSE MACRO", color = NeonGreen.copy(alpha = 0.7f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     
-                    // The Icon
-                    Icon(
-                        imageVector = Icons.Filled.TouchApp, // <-- CHANGED ICON
-                        contentDescription = "Touch",
-                        tint = NeonGreen,
-                        modifier = Modifier.size(50.dp)
+                    Text(
+                        text = "🖱️",
+                        fontSize = 40.sp,
+                        color = NeonGreen
                     )
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Big LMB and RMB buttons
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         KeyButtonWide("LMB")
                         KeyButtonWide("RMB")
@@ -178,7 +170,6 @@ fun MainAppScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Toggle
                 Column(
                     modifier = Modifier.fillMaxWidth().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).background(PanelBg).padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
