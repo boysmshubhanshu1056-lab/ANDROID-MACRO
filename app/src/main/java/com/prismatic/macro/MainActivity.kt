@@ -120,7 +120,7 @@ fun MainAppScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxSize()) {
-            // LEFT: Visual Keyboard (Only the requested keys)
+            // LEFT: Visual Keyboard (Only 1,2,3,4 and Z,X,C,V,F)
             Column(
                 modifier = Modifier.weight(1.5f).fillMaxHeight().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -155,7 +155,7 @@ fun MainAppScreen() {
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Visual Mouse
+                // Visual Mouse (LMB & RMB are kept here!)
                 Column(
                     modifier = Modifier.fillMaxWidth().weight(1f).border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -214,7 +214,7 @@ fun KeyButton(label: String) {
 
     Box(
         modifier = Modifier
-            .size(width = 60.dp, height = 60.dp) // Made them bigger since there are fewer keys
+            .size(width = 60.dp, height = 60.dp)
             .border(2.dp, borderColor, RoundedCornerShape(6.dp))
             .background(if (isSelected) NeonRed.copy(alpha = 0.1f) else PanelBg)
             .clickable { isSelected = !isSelected },
@@ -249,6 +249,8 @@ fun MouseVisual() {
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
+        
+        // LMB and RMB buttons are safely here
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             KeyButtonWide("LMB")
             KeyButtonWide("RMB")
