@@ -12,7 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mouse
+import androidx.compose.material.icons.filled.TouchApp // <-- CHANGED IMPORT
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -150,7 +150,7 @@ fun MainAppScreen() {
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Mouse Panel (Using a standard Material Icon so it doesn't break)
+                // Mouse Panel
                 Column(
                     modifier = Modifier.fillMaxWidth().weight(1f).border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -159,12 +159,12 @@ fun MainAppScreen() {
                     Text("MOUSE MACRO", color = NeonGreen.copy(alpha = 0.7f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // The Mouse Icon
+                    // The Icon
                     Icon(
-                        imageVector = Icons.Filled.Mouse,
-                        contentDescription = "Mouse",
+                        imageVector = Icons.Filled.TouchApp, // <-- CHANGED ICON
+                        contentDescription = "Touch",
                         tint = NeonGreen,
-                        modifier = Modifier.size(60.dp)
+                        modifier = Modifier.size(50.dp)
                     )
                     
                     Spacer(modifier = Modifier.height(16.dp))
