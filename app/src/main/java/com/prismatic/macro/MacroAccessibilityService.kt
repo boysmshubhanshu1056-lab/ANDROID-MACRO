@@ -58,10 +58,12 @@ class MacroAccessibilityService : AccessibilityService() {
     private fun setupDot() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         
-        // Making the view 50x50 so the dot fits perfectly in the center
+        // Make the view 50x50 for the dot
         params = WindowManager.LayoutParams(
             50, 50, 
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            // FLAG_NOT_TOUCHABLE allows clicks to pass through
+            // FLAG_NOT_FOCUSABLE stops it from taking over the keyboard
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -72,7 +74,21 @@ class MacroAccessibilityService : AccessibilityService() {
             targetY = 500f
         }
 
-        dotView = DotView(this)
+        dotView = DotView(this).apply {
+            // Listen for mouse hover events directly on the view
+            setOnHoverListener { view, event ->
+                if (event.action == MotionEvent.ACTION_HOVER_MOVE) {
+                    targetX = event.rawX
+                    targetY = event.rawY
+
+                    params?.x = event.rawX.toInt() - 25
+                    params?.y = event.rawY.toInt() - 25
+                    
+                    windowManager?.updateViewLayout(view, params)
+                }
+                true
+            }
+        }
         windowManager?.addView(dotView, params)
     }
 
@@ -87,26 +103,6 @@ class MacroAccessibilityService : AccessibilityService() {
             handler.removeCallbacks(spamRunnable)
         }
         return true 
-    }
-
-    // This makes the dot follow the physical mouse
-    override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
-        if (event != null) {
-            if (event.source and android.view.InputDevice.SOURCE_MOUSE == android.view.InputDevice.SOURCE_MOUSE) {
-                if (event.action == MotionEvent.ACTION_HOVER_MOVE) {
-                    targetX = event.x
-                    targetY = event.y
-
-                    // Center the 50x50 view over the mouse cursor
-                    params?.x = event.x.toInt() - 25
-                    params?.y = event.y.toInt() - 25
-                    dotView?.let { view ->
-                        windowManager?.updateViewLayout(view, params)
-                    }
-                }
-            }
-        }
-        return super.onGenericMotionEvent(event)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
@@ -126,13 +122,12 @@ class DotView(context: Context) : View(context) {
         color = Color.parseColor("#39FF14") // Neon Green
         style = Paint.Style.FILL
         isAntiAlias = true
-        // The glow effect
         setShadowLayer(15f, 0f, 0f, Color.parseColor("#39FF14")) 
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // Draw a small dot right in the center of the 50x50 view
+        // Draw a small dot right in the center
         canvas.drawCircle(width / 2f, height / 2f, 8f, paint)
     }
 }
