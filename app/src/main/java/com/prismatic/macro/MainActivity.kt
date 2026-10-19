@@ -6,6 +6,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,7 +16,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,14 +38,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Force Landscape Mode strictly
         requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         
         setContent {
             var hasPermission by remember { mutableStateOf(checkAccessibilityPermission()) }
             val lifecycleOwner = LocalLifecycleOwner.current
 
-            // Safely check for permission when returning from Settings
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
@@ -117,38 +120,55 @@ fun MainAppScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxSize()) {
-            // LEFT: Keyboard
+            // LEFT: Visual Keyboard (Only the requested keys)
             Column(
-                modifier = Modifier.weight(2f).fillMaxHeight().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
+                modifier = Modifier.weight(1.5f).fillMaxHeight().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("SELECT KEYS", color = NeonGreen.copy(alpha = 0.7f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("SELECT KEYS", color = NeonGreen.copy(alpha = 0.7f), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Row 1: 1 2 3 4
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    KeyButton("1")
+                    KeyButton("2")
+                    KeyButton("3")
+                    KeyButton("4")
+                }
                 Spacer(modifier = Modifier.height(16.dp))
-                KeyRow(listOf("Q", "W", "E", "R", "T"))
-                KeyRow(listOf("A", "S", "D", "F", "G"))
-                KeyRow(listOf("Z", "X", "C", "V", "B"))
+                
+                // Row 2: Z X C V F
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    KeyButton("Z")
+                    KeyButton("X")
+                    KeyButton("C")
+                    KeyButton("V")
+                    KeyButton("F")
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // RIGHT: Mouse, Toggle, CPS
+            // RIGHT: Visual Mouse & Toggle
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
+                // Visual Mouse
                 Column(
-                    modifier = Modifier.fillMaxWidth().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.fillMaxWidth().weight(1f).border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Text("MOUSE", color = NeonGreen.copy(alpha = 0.7f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("MOUSE MACRO", color = NeonGreen.copy(alpha = 0.7f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        KeyButton("LMB")
-                        KeyButton("RMB")
-                    }
+                    MouseVisual()
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Toggle Switch
                 Column(
                     modifier = Modifier.fillMaxWidth().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).background(PanelBg).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -169,15 +189,17 @@ fun MainAppScreen() {
                         )
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
                     onClick = { showCpsScreen = true },
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PanelBg),
                     border = BorderStroke(2.dp, NeonGreen),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("TEST MACRO (CPS CHECKER)", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("TEST MACRO (CPS CHECKER)", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }
@@ -185,30 +207,70 @@ fun MainAppScreen() {
 }
 
 @Composable
-fun KeyRow(keys: List<String>) {
-    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        keys.forEach { KeyButton(it) }
-    }
-}
-
-@Composable
 fun KeyButton(label: String) {
     var isSelected by remember { mutableStateOf(false) }
-    
-    // Turns RED when selected
     val borderColor = if (isSelected) NeonRed else NeonGreen.copy(alpha = 0.3f)
     val textColor = if (isSelected) NeonRed else Color.Gray
 
     Box(
         modifier = Modifier
-            .padding(4.dp)
-            .size(width = if (label.length > 1) 80.dp else 50.dp, height = 50.dp)
+            .size(width = 60.dp, height = 60.dp) // Made them bigger since there are fewer keys
             .border(2.dp, borderColor, RoundedCornerShape(6.dp))
             .background(if (isSelected) NeonRed.copy(alpha = 0.1f) else PanelBg)
             .clickable { isSelected = !isSelected },
         contentAlignment = Alignment.Center
     ) {
-        Text(text = label, color = textColor, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(text = label, color = textColor, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+    }
+}
+
+@Composable
+fun MouseVisual() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Canvas(modifier = Modifier.size(70.dp, 110.dp)) {
+            val width = size.width
+            val height = size.height
+            
+            // Mouse Body
+            drawRoundRect(
+                color = NeonGreen.copy(alpha = 0.8f),
+                topLeft = Offset(0f, 0f),
+                size = Size(width, height),
+                cornerRadius = CornerRadius(35f, 35f),
+                style = Stroke(width = 6f)
+            )
+            
+            // Scroll Wheel Line
+            drawLine(
+                color = NeonGreen.copy(alpha = 0.8f),
+                start = Offset(width / 2, 20f),
+                end = Offset(width / 2, 50f),
+                strokeWidth = 6f
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            KeyButtonWide("LMB")
+            KeyButtonWide("RMB")
+        }
+    }
+}
+
+@Composable
+fun KeyButtonWide(label: String) {
+    var isSelected by remember { mutableStateOf(false) }
+    val borderColor = if (isSelected) NeonRed else NeonGreen.copy(alpha = 0.3f)
+    val textColor = if (isSelected) NeonRed else Color.Gray
+
+    Box(
+        modifier = Modifier
+            .size(width = 70.dp, height = 45.dp)
+            .border(2.dp, borderColor, RoundedCornerShape(6.dp))
+            .background(if (isSelected) NeonRed.copy(alpha = 0.1f) else PanelBg)
+            .clickable { isSelected = !isSelected },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = label, color = textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
 }
 
