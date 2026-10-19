@@ -1,7 +1,18 @@
 package com.prismatic.macro
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
+import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.os.Handler
 import android.os.Looper
@@ -14,22 +25,25 @@ object MacroState {
 class MacroAccessibilityService : AccessibilityService() {
 
     private val handler = Handler(Looper.getMainLooper())
-    private var heldKeyCode = -1
+    private var isHoldingKey = false
+    private var windowManager: WindowManager? = null
+    private var dotView: DotView? = null
+    private var params: WindowManager.LayoutParams? = null
+    
+    private var targetX = 500f
+    private var targetY = 500f
 
     private val spamRunnable = object : Runnable {
         override fun run() {
-            if (MacroState.isMacroEnabled && heldKeyCode != -1) {
-                val downTime = android.os.SystemClock.uptimeMillis()
-                val eventDown = KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, heldKeyCode, 0)
-                val eventUp = KeyEvent(downTime, downTime, KeyEvent.ACTION_UP, heldKeyCode, 0)
-                
-                try {
-                    val inputManager = getSystemService(INPUT_SERVICE) as android.hardware.input.InputManager
-                    val injectMethod = inputManager.javaClass.getMethod("injectInputEvent", android.view.InputEvent::class.java, Int::class.javaPrimitiveType)
-                    injectMethod.invoke(inputManager, eventDown, 0)
-                    injectMethod.invoke(inputManager, eventUp, 0)
-                } catch (e: Exception) { }
+            if (MacroState.isMacroEnabled && isHoldingKey) {
+                val path = Path()
+                path.moveTo(targetX, targetY) 
 
+                val gesture = GestureDescription.Builder()
+                    .addStroke(GestureDescription.StrokeDescription(path, 0, 10))
+                    .build()
+
+                dispatchGesture(gesture, null, null)
                 handler.postDelayed(this, 15) 
             }
         }
@@ -38,23 +52,87 @@ class MacroAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         MacroState.isServiceRunning = true
+        setupDot()
+    }
+
+    private fun setupDot() {
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        
+        // Making the view 50x50 so the dot fits perfectly in the center
+        params = WindowManager.LayoutParams(
+            50, 50, 
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 500
+            y = 500
+            targetX = 500f
+            targetY = 500f
+        }
+
+        dotView = DotView(this)
+        windowManager?.addView(dotView, params)
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         if (!MacroState.isMacroEnabled) return super.onKeyEvent(event)
 
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-            heldKeyCode = event.keyCode
+            isHoldingKey = true
             handler.post(spamRunnable)
         } else if (event.action == KeyEvent.ACTION_UP) {
-            if (event.keyCode == heldKeyCode) {
-                heldKeyCode = -1
-                handler.removeCallbacks(spamRunnable)
-            }
+            isHoldingKey = false
+            handler.removeCallbacks(spamRunnable)
         }
         return true 
     }
 
+    // This makes the dot follow the physical mouse
+    override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
+        if (event != null) {
+            if (event.source and android.view.InputDevice.SOURCE_MOUSE == android.view.InputDevice.SOURCE_MOUSE) {
+                if (event.action == MotionEvent.ACTION_HOVER_MOVE) {
+                    targetX = event.x
+                    targetY = event.y
+
+                    // Center the 50x50 view over the mouse cursor
+                    params?.x = event.x.toInt() - 25
+                    params?.y = event.y.toInt() - 25
+                    dotView?.let { view ->
+                        windowManager?.updateViewLayout(view, params)
+                    }
+                }
+            }
+        }
+        return super.onGenericMotionEvent(event)
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() { handler.removeCallbacks(spamRunnable) }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        if (dotView != null) {
+            windowManager?.removeView(dotView)
+        }
+    }
+}
+
+// --- THE NEW DOT CROSSHAIR ---
+class DotView(context: Context) : View(context) {
+    private val paint = Paint().apply {
+        color = Color.parseColor("#39FF14") // Neon Green
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        // The glow effect
+        setShadowLayer(15f, 0f, 0f, Color.parseColor("#39FF14")) 
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        // Draw a small dot right in the center of the 50x50 view
+        canvas.drawCircle(width / 2f, height / 2f, 8f, paint)
+    }
 }
