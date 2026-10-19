@@ -6,21 +6,18 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mouse
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -120,7 +117,7 @@ fun MainAppScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxSize()) {
-            // LEFT: Visual Keyboard (Only 1,2,3,4 and Z,X,C,V,F)
+            // LEFT: Keyboard
             Column(
                 modifier = Modifier.weight(1.5f).fillMaxHeight().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -129,7 +126,6 @@ fun MainAppScreen() {
                 Text("SELECT KEYS", color = NeonGreen.copy(alpha = 0.7f), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                // Row 1: 1 2 3 4
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     KeyButton("1")
                     KeyButton("2")
@@ -138,7 +134,6 @@ fun MainAppScreen() {
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Row 2: Z X C V F
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     KeyButton("Z")
                     KeyButton("X")
@@ -150,12 +145,12 @@ fun MainAppScreen() {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // RIGHT: Visual Mouse & Toggle
+            // RIGHT: Mouse & Toggles
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Visual Mouse (LMB & RMB are kept here!)
+                // Mouse Panel (Using a standard Material Icon so it doesn't break)
                 Column(
                     modifier = Modifier.fillMaxWidth().weight(1f).border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -163,18 +158,33 @@ fun MainAppScreen() {
                 ) {
                     Text("MOUSE MACRO", color = NeonGreen.copy(alpha = 0.7f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
-                    MouseVisual()
+                    
+                    // The Mouse Icon
+                    Icon(
+                        imageVector = Icons.Filled.Mouse,
+                        contentDescription = "Mouse",
+                        tint = NeonGreen,
+                        modifier = Modifier.size(60.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Big LMB and RMB buttons
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        KeyButtonWide("LMB")
+                        KeyButtonWide("RMB")
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Toggle Switch
+                // Toggle
                 Column(
-                    modifier = Modifier.fillMaxWidth().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).background(PanelBg).padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().border(2.dp, NeonGreen, RoundedCornerShape(8.dp)).background(PanelBg).padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text("ENABLE ALL-KEY MACRO", color = NeonGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Switch(
                         checked = isMacroEnabled,
                         onCheckedChange = { 
@@ -221,40 +231,6 @@ fun KeyButton(label: String) {
         contentAlignment = Alignment.Center
     ) {
         Text(text = label, color = textColor, fontWeight = FontWeight.Bold, fontSize = 22.sp)
-    }
-}
-
-@Composable
-fun MouseVisual() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Canvas(modifier = Modifier.size(70.dp, 110.dp)) {
-            val width = size.width
-            val height = size.height
-            
-            // Mouse Body
-            drawRoundRect(
-                color = NeonGreen.copy(alpha = 0.8f),
-                topLeft = Offset(0f, 0f),
-                size = Size(width, height),
-                cornerRadius = CornerRadius(35f, 35f),
-                style = Stroke(width = 6f)
-            )
-            
-            // Scroll Wheel Line
-            drawLine(
-                color = NeonGreen.copy(alpha = 0.8f),
-                start = Offset(width / 2, 20f),
-                end = Offset(width / 2, 50f),
-                strokeWidth = 6f
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // LMB and RMB buttons are safely here
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            KeyButtonWide("LMB")
-            KeyButtonWide("RMB")
-        }
     }
 }
 
